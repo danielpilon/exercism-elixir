@@ -8,19 +8,25 @@ defmodule RobotSimulator do
     :east => {:north, :south, {1, 0}}
   }
 
+  @directions Map.keys(@moves)
+
+  defguard is_valid_position(x, y) when is_integer(x) and is_integer(y)
+  defguard is_valid_direction(direction) when direction in @directions
+
   @doc """
   Create a Robot Simulator given an initial direction and position.
 
   Valid directions are: `:north`, `:east`, `:south`, `:west`
   """
   @spec create(direction :: atom, position :: {integer, integer}) :: any
-  def create(direction \\ :north, position \\ {0, 0}) do
-    cond do
-      invalid_direction?(direction) -> {:error, "invalid direction"}
-      invalid_position?(position) -> {:error, "invalid position"}
-      true -> %RobotSimulator{direction: direction, position: position}
-    end
-  end
+  def create(direction \\ :north, postion \\ {0, 0})
+
+  def create(direction, {x, y} = position)
+      when is_valid_position(x, y) and is_valid_direction(direction),
+      do: %RobotSimulator{direction: direction, position: position}
+
+  def create(_, {x, y}) when is_valid_position(x, y), do: {:error, "invalid direction"}
+  def create(_, _), do: {:error, "invalid position"}
 
   @doc """
   Simulate the robot's movement given a string of instructions.
@@ -43,11 +49,6 @@ defmodule RobotSimulator do
   """
   @spec position(robot :: any) :: {integer, integer}
   def position(robot), do: robot.position
-
-  defp invalid_direction?(direction), do: not Map.has_key?(@moves, direction)
-
-  defp invalid_position?({x, y}) when is_integer(x) and is_integer(y), do: false
-  defp invalid_position?(_), do: true
 
   defp move("", robot), do: robot
 
