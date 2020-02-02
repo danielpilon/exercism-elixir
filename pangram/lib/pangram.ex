@@ -1,5 +1,6 @@
 defmodule Pangram do
-  @alphabet ?a..?z |> Enum.to_list()
+  @alphabet MapSet.new(?a..?z)
+  @ascii_letters_size 26
 
   @doc """
   Determines if a word or sentence is a pangram.
@@ -19,7 +20,7 @@ defmodule Pangram do
       sentence
       |> String.downcase()
       |> to_charlist()
-      |> is_pangram?()
-
-  defp is_pangram?(chars), do: @alphabet -- chars == []
+      |> MapSet.new()
+      |> MapSet.intersection(@alphabet)
+      |> MapSet.size() == @ascii_letters_size
 end
