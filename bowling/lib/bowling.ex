@@ -4,28 +4,28 @@ defmodule Frame do
   @type t :: %Frame{
           first_roll: integer(),
           second_roll: integer(),
-          first_bonus: integer(),
-          second_bonus: integer(),
+          bonus: integer(),
           result: result,
           roll: roll
         }
   defstruct first_roll: 0,
             second_roll: 0,
-            first_bonus: 0,
-            second_bonus: 0,
+            bonus: 0,
             result: :open,
             roll: :none
+
+  @max_pins 10
 
   @doc """
     Records the number of pins knocked down on a single roll.
   """
   @spec roll(Frame.t(), integer) :: any
-  def roll(_, pins) when pins < 0, do: {:error, "Negative roll is invalid"}
+  def roll(_frame, pins) when pins < 0, do: {:error, "Negative roll is invalid"}
 
-  def roll(_, pins) when pins > 10, do: {:error, "Pin count exceeds pins on the lane"}
+  def roll(_frame, pins) when pins > @max_pins, do: {:error, "Pin count exceeds pins on the lane"}
 
-  def roll(%Frame{roll: :none} = frame, 10),
-    do: {:ok, %Frame{frame | first_roll: 10, result: :strike, roll: :first}}
+  def roll(%Frame{roll: :none} = frame, @max_pins),
+    do: {:ok, %Frame{frame | first_roll: @max_pins, result: :strike, roll: :first}}
 
   def roll(%Frame{roll: :none} = frame, pins),
     do: {:ok, %Frame{frame | first_roll: pins, roll: :first}}
@@ -34,25 +34,25 @@ defmodule Frame do
     do: {:ok, %Frame{frame | second_roll: pins, roll: :second}}
 
   def roll(%Frame{roll: :first, first_roll: first_roll}, pins)
-      when first_roll + pins > 10,
+      when first_roll + pins > @max_pins,
       do: {:error, "Pin count exceeds pins on the lane"}
 
   def roll(%Frame{roll: :first, first_roll: first_roll} = frame, pins)
-      when first_roll + pins == 10,
+      when first_roll + pins == @max_pins,
       do: {:ok, %Frame{frame | second_roll: pins, result: :spare, roll: :second}}
 
   def roll(%Frame{roll: :first} = frame, pins),
     do: {:ok, %Frame{frame | second_roll: pins, roll: :finished}}
 
   def roll(%Frame{roll: :second, result: :strike, second_roll: second_roll}, pins)
-      when second_roll < 10 and second_roll + pins > 10,
+      when second_roll < @max_pins and second_roll + pins > @max_pins,
       do: {:error, "Pin count exceeds pins on the lane"}
 
   def roll(%Frame{roll: :second, result: :strike} = frame, pins),
-    do: {:ok, %Frame{frame | first_bonus: pins, roll: :finished}}
+    do: {:ok, %Frame{frame | bonus: pins, roll: :finished}}
 
   def roll(%Frame{roll: :second, result: :spare} = frame, pins),
-    do: {:ok, %Frame{frame | first_bonus: pins, roll: :finished}}
+    do: {:ok, %Frame{frame | bonus: pins, roll: :finished}}
 
   def roll(%Frame{roll: :second} = frame, pins),
     do: {:ok, %Frame{frame | second_roll: pins, roll: :finished}}
@@ -62,15 +62,19 @@ defmodule Frame do
   def score(%Frame{
         first_roll: first_roll,
         second_roll: second_roll,
-        first_bonus: first_bonus,
-        second_bonus: second_bonus
+        bonus: bonus
       }),
-      do: first_roll + second_roll + first_bonus + second_bonus
+      do: first_roll + second_roll + bonus
 end
 
 defmodule Bowling do
-  @type t :: %Bowling{frames: [Frame.t()], round: integer()}
-  defstruct frames: [], round: 1
+  @type t :: %Bowling{frames: [Frame.t()]}
+  defstruct frames: []
+
+  @max_frames 10
+
+  defguardp round_finished(result, roll) when result in [:spare, :strike] or roll == :finished
+  defguardp last_frame_reached(frames) when length(frames) == @max_frames
 
   @doc """
     Creates a new game of bowling that can be used to store the results of
@@ -85,8 +89,9 @@ defmodule Bowling do
     case it returns a helpful message.
   """
   @spec roll(any, integer) :: any | String.t()
-  def roll(%Bowling{frames: [%Frame{roll: :finished} | _rest], round: 10}, _roll),
-    do: {:error, "Cannot roll after game is over"}
+  def roll(%Bowling{frames: [%Frame{roll: :finished} | _rest] = frames}, _roll)
+      when last_frame_reached(frames),
+      do: {:error, "Cannot roll after game is over"}
 
   def roll(%Bowling{frames: []} = game, roll) do
     with({:ok, frame} <- Frame.roll(%Frame{}, roll)) do
@@ -113,19 +118,19 @@ defmodule Bowling do
     If the game isn't complete, it returns a helpful message.
   """
   @spec score(any) :: integer | String.t()
-  def score(%Bowling{frames: [%Frame{roll: :finished} | _rest] = frames, round: 10}),
-    do: frames |> Enum.map(&Frame.score(&1)) |> Enum.sum()
+  def score(%Bowling{frames: [%Frame{roll: :finished} | _rest] = frames})
+      when last_frame_reached(frames),
+      do: frames |> Enum.map(&Frame.score(&1)) |> Enum.sum()
 
   def score(_game), do: {:error, "Score cannot be taken until the end of the game"}
 
-  defp switch_round(%Bowling{round: 10} = game), do: game
+  defp switch_round(%Bowling{frames: frames} = game) when last_frame_reached(frames), do: game
 
   defp switch_round(
-         %Bowling{frames: [%Frame{result: result, roll: roll} | _rest] = frames, round: round} =
-           game
+         %Bowling{frames: [%Frame{result: result, roll: roll} | _rest] = frames} = game
        )
-       when result in [:spare, :strike] or roll == :finished,
-       do: %Bowling{game | round: round + 1, frames: [%Frame{} | frames]}
+       when round_finished(result, roll),
+       do: %Bowling{game | frames: [%Frame{} | frames]}
 
   defp switch_round(game), do: game
 
