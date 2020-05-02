@@ -1,65 +1,65 @@
 defmodule OcrNumbers do
   @numbers %{
-    [
+    {
       " _ ",
       "| |",
       "|_|",
       "   "
-    ] => "0",
-    [
+    } => "0",
+    {
       "   ",
       "  |",
       "  |",
       "   "
-    ] => "1",
-    [
+    } => "1",
+    {
       " _ ",
       " _|",
       "|_ ",
       "   "
-    ] => "2",
-    [
+    } => "2",
+    {
       " _ ",
       " _|",
       " _|",
       "   "
-    ] => "3",
-    [
+    } => "3",
+    {
       "   ",
       "|_|",
       "  |",
       "   "
-    ] => "4",
-    [
+    } => "4",
+    {
       " _ ",
       "|_ ",
       " _|",
       "   "
-    ] => "5",
-    [
+    } => "5",
+    {
       " _ ",
       "|_ ",
       "|_|",
       "   "
-    ] => "6",
-    [
+    } => "6",
+    {
       " _ ",
       "  |",
       "  |",
       "   "
-    ] => "7",
-    [
+    } => "7",
+    {
       " _ ",
       "|_|",
       "|_|",
       "   "
-    ] => "8",
-    [
+    } => "8",
+    {
       " _ ",
       "|_|",
       " _|",
       "   "
-    ] => "9"
+    } => "9"
   }
 
   @doc """
@@ -72,32 +72,26 @@ defmodule OcrNumbers do
   def convert([first | _rest]) when rem(byte_size(first), 3) > 0,
     do: {:error, 'invalid column count'}
 
-  def convert(input) do
-    input
-    |> Enum.chunk_every(4)
-    |> Enum.map_join(",", &convert_to_numbers/1)
-    |> (fn numbers -> {:ok, numbers} end).()
-  end
+  def convert(input), do: {:ok, do_convert(input)}
 
-  defp convert_to_numbers(input) do
-    input
-    |> Enum.map(&split_every_3/1)
-    |> Enum.zip()
-    |> Enum.map(&Tuple.to_list/1)
-    |> Enum.map(&do_convert/1)
-    |> to_number("")
-  end
+  defp do_convert(input),
+    do:
+      input
+      |> Enum.chunk_every(4)
+      |> Enum.map_join(",", &convert_to_numbers/1)
+
+  defp convert_to_numbers(input),
+    do:
+      input
+      |> Enum.map(&split_every_3/1)
+      |> Enum.zip()
+      |> Enum.map(&conver_to_number/1)
+      |> to_number("")
 
   defp split_every_3(string), do: Regex.scan(~r/.../, string) |> List.flatten()
 
   defp to_number([], acc), do: acc
   defp to_number([number | rest], acc), do: to_number(rest, acc <> number)
 
-  defp do_convert(input) do
-    with {:ok, number} <- Map.fetch(@numbers, input) do
-      number
-    else
-      _err -> "?"
-    end
-  end
+  defp conver_to_number(input), do: @numbers[input] || "?"
 end
