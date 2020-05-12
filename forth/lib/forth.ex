@@ -82,18 +82,13 @@ defmodule Forth do
   defp do_eval(evaluator, word, operations, [operation | rest]),
     do: do_eval(evaluator, word, [operation | operations], rest)
 
-  defp subtract(enumerable), do: enumerable |> Enum.reverse() |> do_subtract()
-  defp do_subtract([n]), do: [n]
-  defp do_subtract([x, y | rest]), do: subtract([x - y | rest])
+  defp subtract([x, y | rest]), do: [y - x | rest]
+  defp sum([x, y | rest]), do: [x + y | rest]
 
-  defp sum(enumerable), do: [enumerable |> Enum.sum()]
-
-  defp multiply(enumerable), do: [Enum.reduce(enumerable, 1, &Kernel.*(&1, &2))]
+  defp multiply([x, y | rest]), do: [x * y | rest]
 
   defp divide([0 | _rest]), do: raise(Forth.DivisionByZero)
-  defp divide(enumerable), do: enumerable |> Enum.reverse() |> do_divide()
-  defp do_divide([n]), do: n
-  defp do_divide([n, k | rest]), do: [do_divide([div(n, k) | rest])]
+  defp divide([x, y | rest]), do: [div(y, x) | rest]
 
   defp duplicate([]), do: raise(Forth.StackUnderflow)
   defp duplicate([head | _tail] = enumerable), do: [head | enumerable]

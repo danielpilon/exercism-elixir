@@ -52,6 +52,15 @@ defmodule ForthTest do
     end
   end
 
+  test "a more complex operation" do
+    s =
+      Forth.new()
+      |> Forth.eval("3 3 + 1 2 + /")
+      |> Forth.format_stack()
+
+    assert s == "2"
+  end
+
   # @tag :pending
   test "dup" do
     s =
