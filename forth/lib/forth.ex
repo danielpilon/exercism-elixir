@@ -47,10 +47,15 @@ defmodule Forth do
 
   defp do_eval(evaluator, []), do: evaluator
 
-  defp do_eval(evaluator, [":", word | rest]) do
+  defp do_eval(%Forth{custom_words: custom_words} = evaluator, [":", word | rest]) do
+    {operations, [";" | rest]} = Enum.split_while(rest, &(&1 != ";"))
+
     case Integer.parse(word) do
-      {_num, _rest} -> raise Forth.InvalidWord
-      _ -> do_eval(evaluator, word, [], rest)
+      {_num, _rest} ->
+        raise Forth.InvalidWord
+
+      _ ->
+        do_eval(%Forth{evaluator | custom_words: Map.put(custom_words, word, operations)}, rest)
     end
   end
 
@@ -68,19 +73,6 @@ defmodule Forth do
       _ -> raise Forth.UnknownWord
     end
   end
-
-  defp do_eval(%Forth{custom_words: custom_words} = evaluator, word, operations, [";" | rest]),
-    do:
-      do_eval(
-        %Forth{
-          evaluator
-          | custom_words: Map.put(custom_words, word, operations |> Enum.reverse())
-        },
-        rest
-      )
-
-  defp do_eval(evaluator, word, operations, [operation | rest]),
-    do: do_eval(evaluator, word, [operation | operations], rest)
 
   defp subtract([x, y | rest]), do: [y - x | rest]
   defp sum([x, y | rest]), do: [x + y | rest]
